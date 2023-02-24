@@ -6,7 +6,9 @@ import scala.quoted.*
 
 @experimental
 class cached extends MacroAnnotation {
-  override def transform(using q: Quotes)(tree: quotes.reflect.Definition): List[quotes.reflect.Definition] = {
+  override def transform(using q: Quotes)(
+    tree: quotes.reflect.Definition
+  ): List[quotes.reflect.Definition] = {
     import q.reflect._
 
     tree match {
@@ -16,14 +18,14 @@ class cached extends MacroAnnotation {
         val paramTermRefs = flattenedParams.map(_.asInstanceOf[ValDef].symbol.termRef)
         val paramTuple = Expr.ofTupleFromSeq(paramTermRefs.map(Ident(_).asExpr))
 
-        val cacheName = Symbol.freshName(name + "Cache")
-
         (paramTuple, rhs.asExpr) match {
           case ('{ $p: paramTupleType }, '{ $r: rhsType }) =>
 
+            val cacheName = Symbol.freshName(name + "Cache")
             val cacheType = TypeRepr.of[Cache[paramTupleType, rhsType]]
             val cacheRhs = '{ new MapCache[paramTupleType, rhsType] }.asTerm
-            val cacheSymbol = Symbol.newVal(tree.symbol.owner, cacheName, cacheType, Flags.Private, Symbol.noSymbol)
+            val cacheSymbol = Symbol.newVal(
+              tree.symbol.owner, cacheName, cacheType, Flags.Private, Symbol.noSymbol)
             val cache = ValDef(cacheSymbol, Some(cacheRhs))
             val cacheRef = Ref(cacheSymbol).asExprOf[Cache[paramTupleType, rhsType]]
 
