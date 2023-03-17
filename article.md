@@ -83,25 +83,29 @@ override def transform(using q: Quotes)(
   import q.reflect._
 
   tree match {
-    case DefDef(name, params, returnType, Some(rhs)) =>                                // (1)
+    case DefDef(name, params, returnType, Some(rhs)) =>          // (1)
 
-      val flattenedParams = params.map(_.params).flatten                               // (2)
+      val flattenedParams = params.map(_.params).flatten         // (2)
       val paramTermRefs = flattenedParams.map(
         _.asInstanceOf[ValDef].symbol.termRef)
-      val paramTuple = Expr.ofTupleFromSeq(paramTermRefs.map(Ident(_).asExpr))
+      val paramTuple = 
+        Expr.ofTupleFromSeq(paramTermRefs.map(Ident(_).asExpr))
         
       (paramTuple, rhs.asExpr) match {
-        case ('{ $p: paramTupleType }, '{ $r: rhsType }) =>                            // (3)
+        case ('{ $p: paramTupleType }, '{ $r: rhsType }) =>      // (3)
 
-          val cacheName = Symbol.freshName(name + "Cache")                             // (4)
-          val cacheType = TypeRepr.of[Cache[paramTupleType, rhsType]]
-          val cacheRhs = '{ new MapCache[paramTupleType, rhsType] }.asTerm
-          val cacheSymbol = Symbol.newVal(
-            tree.symbol.owner, cacheName, cacheType, Flags.Private, Symbol.noSymbol)
+          val cacheName = Symbol.freshName(name + "Cache")       // (4)
+          val cacheType = 
+            TypeRepr.of[Cache[paramTupleType, rhsType]]
+          val cacheRhs = 
+            '{ new MapCache[paramTupleType, rhsType] }.asTerm
+          val cacheSymbol = Symbol.newVal(tree.symbol.owner,
+            cacheName, cacheType, Flags.Private, Symbol.noSymbol)
           val cache = ValDef(cacheSymbol, Some(cacheRhs))
-          val cacheRef = Ref(cacheSymbol).asExprOf[Cache[paramTupleType, rhsType]]
+          val cacheRef = Ref(cacheSymbol)
+            .asExprOf[Cache[paramTupleType, rhsType]]
 
-          def buildNewRhs(using q: Quotes) = {                                         // (5)
+          def buildNewRhs(using q: Quotes) = {                   // (5)
             import q.reflect._
             '{
               val key = ${ paramTuple.asExprOf[paramTupleType] }
@@ -115,15 +119,16 @@ override def transform(using q: Quotes)(
               }
             }
           }
-          val newRhs = buildNewRhs(using tree.symbol.asQuotes).asTerm
+          val newRhs = 
+            buildNewRhs(using tree.symbol.asQuotes).asTerm
           
           val expandedMethod = DefDef.copy(tree)(
-            name, params, returnType, Some(newRhs))                                    // (6)
+            name, params, returnType, Some(newRhs))              // (6)
 
           List(cache, expandedMethod)
       }
     case _ =>
-      report.error("Annottee must be a method")                                        // (7)
+      report.error("Annottee must be a method")                  // (7)
       List(tree)
   }
 }
