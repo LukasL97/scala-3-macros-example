@@ -6,10 +6,10 @@ import scala.quoted.*
 
 @experimental
 class cached extends MacroAnnotation {
-  override def transform(using q: Quotes)(
+  override def transform(using quotes: Quotes)(
     tree: quotes.reflect.Definition
   ): List[quotes.reflect.Definition] = {
-    import q.reflect._
+    import quotes.reflect._
 
     tree match {
       case DefDef(name, params, returnType, Some(rhs)) =>
